@@ -23,7 +23,9 @@ CMD_GET_DEV_STATE = bs([
     81, 120, -93, 0, 1, 0, 0, 0, -1
 ])
 
-CMD_SET_QUALITY_200_DPI = bs([81, 120, -92, 0, 1, 0, 50, -98, -1])
+# CMD_SET_QUALITY_200_DPI = bs([81, 120, -92, 0, 1, 0, 50, -98, -1]) # original settings
+
+CMD_SET_QUALITY_200_DPI = bs([81, 120, 164, 0, 1, 0, 53, 139, 255]) # as mentioned in https://github.com/rbaron/catprinter/issues/36#issuecomment-1960515085
 
 CMD_GET_DEV_INFO = bs([81, 120, -88, 0, 1, 0, 0, 0, -1])
 
@@ -35,9 +37,15 @@ CMD_LATTICE_END = bs([81, 120, -90, 0, 11, 0, -86, 85,
 
 CMD_SET_PAPER = bs([81, 120, -95, 0, 2, 0, 48, 0, -7, -1])
 
-CMD_PRINT_IMG = bs([81, 120, -66, 0, 1, 0, 0, 0, -1])
+# CMD_PRINT_IMG = bs([81, 120, -66, 0, 1, 0, 0, 0, -1])
+
+CMD_PRINT_IMG = bs([0x51, 0x78, 0xbe, 0x00, 0x01, 0x00, 0x00, 0x00, 0xff])
+
+# \x51\x78\xbe\x00\x01\x00\x00\x00\xff
 
 CMD_PRINT_TEXT = bs([81, 120, -66, 0, 1, 0, 1, 7, -1])
+
+# CMD_PRINT_TEXT = bs([0x51, 0x78, 0xbe, 0x00, 0x01, 0x00, 0x01, 0x07, 0xff])
 
 CHECKSUM_TABLE = bs([
     0, 7, 14, 9, 28, 27, 18, 21, 56, 63, 54, 49, 36, 35, 42, 45, 112, 119, 126, 121,
@@ -94,7 +102,23 @@ def cmd_set_energy(val):
         0,
         0xff,
     ])
-    b_arr[7] = chk_sum(b_arr, 6, 2)
+    b_arr[8] = chk_sum(b_arr, 6, 2) 
+    return bs(b_arr)
+def cmd_apply_energy():
+    b_arr = bs(
+        [
+            81,
+            120,
+            -66,
+            0,
+            1,
+            0,
+            1,
+            0,
+            0xff,
+        ]
+    )
+    b_arr[7] = chk_sum(b_arr, 6, 1)
     return bs(b_arr)
 
 
@@ -167,9 +191,7 @@ def cmd_print_row(img_row):
     return b_arr
 
 
-def cmds_print_img(img, dark_mode=False):
-
-    PRINTER_MODE = CMD_PRINT_TEXT if dark_mode else CMD_PRINT_IMG
+def cmds_print_img(img, energy: int = 0xffff):
 
     data = \
         CMD_GET_DEV_STATE + \
@@ -181,7 +203,8 @@ def cmds_print_img(img, dark_mode=False):
         cmd_feed_paper(25) + \
         CMD_SET_PAPER + \
         CMD_SET_PAPER + \
-        CMD_SET_PAPER + \
         CMD_LATTICE_END + \
         CMD_GET_DEV_STATE
     return data
+
+# removed a CMD_SET_PAPER because I prefer less blank paper after the print.
