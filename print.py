@@ -4,6 +4,7 @@ import asyncio
 import logging
 import sys
 import os
+import catcalendar
 
 from catprinter import logger
 from catprinter.cmds import PRINT_WIDTH, cmds_print_img
@@ -13,7 +14,7 @@ from catprinter.img import read_img, show_preview
 
 def parse_args():
     args = argparse.ArgumentParser(
-        description='prints an image on your cat thermal printer')
+        description='Prints an image on your cat thermal printer')
     args.add_argument('filename', type=str)
     args.add_argument('-l', '--log-level', type=str,
                       choices=['debug', 'info', 'warn', 'error'], default='info')
@@ -35,9 +36,9 @@ def parse_args():
                           'If omitted, the the script will try to auto discover '
                           'the printer based on its advertised BLE services.'
                       ))
-    args.add_argument('-t', '--darker', action='store_true',
-                      help="Print the image in text mode. This leads to more contrast, \
-                          but slower speed.")
+    args.add_argument('-e', '--energy', type=lambda h: int(h.removeprefix("0x"), 16),
+                      help="Thermal energy. Between 0x0000 (light) and 0xffff (darker)",
+                      default="0xffff")
     return args.parse_args()
 
 
@@ -72,7 +73,7 @@ def main():
         return
 
     logger.info(f'✅ Read image: {bin_img.shape} (h, w) pixels')
-    data = cmds_print_img(bin_img, dark_mode=args.darker)
+    data = cmds_print_img(bin_img, energy=args.energy)
     logger.info(f'✅ Generated BLE commands: {len(data)} bytes')
 
     # Try to autodiscover a printer if --device is not specified.
